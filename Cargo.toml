@@ -10,7 +10,10 @@ edition = "2018"
 tokio = { version = "1.2.0", features = ["full"] }
 reqwest = { version = "0.11.1", features = ["json"] }
 serde = { version = "1.0.123", features = ["derive"] }
-
+#oapth = { features = ["with-sqlx-pg", "dev-tools"], version = "0.1.0" }
+#sqlx-core = { default-features = false, features = ["runtime-tokio-native-tls"], version = "0.5.1" }
+sqlx = { version = "0.5.1", features = ["runtime-tokio-native-tls", "postgres"] }
+anyhow = "1.0"
 
 [[bin]]
 name = "atom"
