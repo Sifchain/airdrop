@@ -13,7 +13,7 @@ serde = { version = "1.0.123", features = ["derive"] }
 #oapth = { features = ["with-sqlx-pg", "dev-tools"], version = "0.1.0" }
 #sqlx-core = { default-features = false, features = ["runtime-tokio-native-tls"], version = "0.5.1" }
 sqlx = { version = "0.5.1", features = ["runtime-tokio-native-tls", "postgres"] }
-anyhow = "1.0"
+anyhow = "1.0.38"
 
 [[bin]]
 name = "atom"

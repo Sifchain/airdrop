@@ -1,8 +1,10 @@
-use reqwest::Result;
-use reqwest::Error;
+use anyhow::Result;
+use std::env;
 use serde::Deserialize;
 use sqlx::postgres::PgPoolOptions;
-use sqlx::Postgres;
+use sqlx::{PgPool};
+
+const PER_PAGE: &str = "100";
 
 #[derive(Deserialize,Debug)]
 struct ApiTxsResponse {
@@ -36,14 +38,14 @@ struct RpcResult {
 
 #[derive(Deserialize,Debug, Clone)]
 struct RpcTx {
-    hash: String,
+    pub hash: String,
     height: String,
 }
 
-async fn fetch_cosmos_raw_txs(page: u32) -> Result<(RpcResponse)> {
+async fn fetch_cosmos_raw_txs(page: u32) -> Result<RpcResponse> {
     let request = format!("https://rpc.cosmos.network/tx_search?query=\"transfer.recipient='{to_address}'\"&per_page={per_page}&page={page}",
                           to_address = "cosmos1ejrf4cur2wy6kfurg9f2jppp2h3afe5h6pkh5t",
-                          per_page = "100",
+                          per_page = PER_PAGE,
                           page = page.to_string()
     );
     println!("request: {}", request);
@@ -55,7 +57,7 @@ async fn fetch_cosmos_raw_txs(page: u32) -> Result<(RpcResponse)> {
     Ok(response)
 }
 
-async fn fetch_cosmos_account_txs(address: &str) -> Result<(ApiTxsResponse)> {
+async fn fetch_cosmos_account_txs(address: &str) -> Result<ApiTxsResponse> {
     let request = format!("https://api.cosmostation.io/v1/account/txs/{to_address}", to_address = address);
     println!("request: {}", request);
 
@@ -66,7 +68,7 @@ async fn fetch_cosmos_account_txs(address: &str) -> Result<(ApiTxsResponse)> {
     Ok(response)
 }
 
-async fn fetch_cosmos_txs_details(hash: &str) -> Result<(ApiTxsResponse)> {
+async fn fetch_cosmos_txs_details(hash: &str) -> Result<ApiTxsResponse> {
     let request = format!("https://api.cosmos.network/cosmos/tx/v1beta1/txs/{hash}", hash = hash);
     println!("request: {}", request);
 
@@ -78,27 +80,56 @@ async fn fetch_cosmos_txs_details(hash: &str) -> Result<(ApiTxsResponse)> {
     Ok(response)
 }
 
-fn save_rpc_response_to_db(response: &RpcResponse) {
-    // println!("{:#?}", response);
-
+//
+async fn process_cosmos_raw_txs(response: &RpcResponse, pool: &PgPool) -> Result<()>{
     let txs  = response.result.txs.clone();
 
     for tx in txs {
-        println!("{:?}", tx);
+
+        // save network, hash and height to db
+        match sqlx::query!(
+                    r#"
+                        INSERT INTO txs (network, hash, height)
+                        VALUES ( $1, $2, $3)
+                        RETURNING id
+                    "#, "ATOM", tx.hash, tx.height,
+                ).fetch_one(pool)
+                        .await {
+            Ok(_) => {
+                match fetch_cosmos_txs_details(&tx.hash).await {
+                    Ok(resp) => {
+
+                        // save memo to db
+                        match sqlx::query!(
+                            r#"
+                                UPDATE txs
+                                SET memo = $1
+                                WHERE hash = $2 AND height = $3 AND network = $4
+                                RETURNING id
+                            "#, resp.tx.body.memo, tx.hash, tx.height, "ATOM" ,
+                        ).fetch_one(pool).await {
+                            Ok(_) => println!("record saved"),
+                            Err(e) => println!("error: {}", e),
+                        }
+                    },
+                    Err(e) => return Err(e),
+                };
+            },
+            Err(_) => println!("already saved: {}", tx.hash),
+        }
     }
+    Ok(())
 }
 
-async fn connect() -> sqlx::Result<(sqlx::Pool<Postgres>)> {
+async fn connect() -> Result<sqlx::postgres::PgPool>{
     let pool = PgPoolOptions::new()
-        .max_connections(5)
-        .connect("postgres://postgres:password@localhost/txs").await?;
+        .max_connections(50)
+        .connect(&env::var("DATABASE_URL")?).await?;
     Ok(pool)
 }
 
-#[tokio::main]
-async fn main() -> Result<()> {
-    let pool = connect().await?;
 
+async fn process_incoming_cosmos_txs(pool: &PgPool) -> Result<()>{
     let mut count = 0u32;
 
     // Get raw txs data
@@ -107,21 +138,24 @@ async fn main() -> Result<()> {
         println!("count: {}",count);
 
         let response = fetch_cosmos_raw_txs(count).await?;
-        // println!("{:#?}", response);
-        save_rpc_response_to_db(&response);
+        process_cosmos_raw_txs(&response, &pool).await?;
 
-
-        let mut total: u32 = response.result.total_count.parse().unwrap();
+        let total: u32 = response.result.total_count.parse().unwrap();
         println!("total_count: {}", total);
 
         if count == total / 100 + 1 {
-            println!("Break loop");
+            println!("Finished. Break loop");
             break;
         }
     }
+    Ok(())
+}
 
-    // let response = fetch_cosmos_txs_details("D5F3927B9BCE4F429155B60E626FCDDBC39FC078C435B038BAE358D51FB1A494").await?;
-    // println!("{:#?}", response);
+#[tokio::main]
+async fn main() -> Result<()> {
+    let pool = connect().await?;
+
+    process_incoming_cosmos_txs(&pool).await?;
 
     Ok(())
 }
