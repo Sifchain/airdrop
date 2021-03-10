@@ -22,3 +22,7 @@ path = "src/atom/main.rs"
 [[bin]]
 name = "rune"
 path = "src/rune/main.rs"
+
+[[bin]]
+name = "blockfinder"
+path = "src/blockfinder/main.rs"
