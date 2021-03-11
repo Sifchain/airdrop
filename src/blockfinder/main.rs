@@ -1,23 +1,83 @@
-mod bnb;
-mod atom;
+use serde::{de, Deserialize, Deserializer};
+use chrono::{NaiveDateTime};
 
-use std::time::{Duration, Instant};
-use std::thread::sleep;
-use chrono::prelude::*;
+#[derive(Deserialize,Debug)]
+pub struct RpcResponse {
+    jsonrpc: String,
+    result: Resultz,
+}
 
+#[derive(Deserialize,Debug)]
+struct Resultz {
+   block: Block
+}
 
-fn main() {
-    // let delay = Duration::from_secs(3);
-    // let start = Instant::now();
-    // sleep(delay);
-    // let duration = start.elapsed();
-    //
-    // println!("Time elapsed: {:?}", duration);
+#[derive(Deserialize,Debug)]
+struct Block {
+    header: Header,
+}
 
-   // February 26, 2021, 6:00 AM GMT
-   let end_time = Utc.ymd(2021, 2,26).and_hms(6,0,0);
+#[derive(Deserialize,Debug)]
+pub struct Header {
+    height: String,
+    chain_id: String,
+    #[serde(deserialize_with = "atom_naive_date_time_from_str")]
+    time: NaiveDateTime,
+}
 
-   println!("{:?}", end_time);
+fn atom_naive_date_time_from_str<'de, D> (deserializer: D) -> Result<NaiveDateTime, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let s: String = Deserialize::deserialize(deserializer)?;
+    match NaiveDateTime::parse_from_str(&s, "%Y-%m-%dT%H:%M:%S.%fZ") {
+        Ok(res) => Ok(res),
+        Err(_) => {
+            NaiveDateTime::parse_from_str(&s, "%Y-%m-%dT%H:%M:%SZ").map_err(de::Error::custom)
+        }
+    }
+}
 
-   let now = Utc::now();
+mod tests {
+    use super::*;
+
+    #[test] // cosmos hub
+    fn deserialize01(){
+
+        let result: Header = serde_json::from_str(
+            r#"{ "chain_id": "1", "height": "1","time": "2019-12-11T16:11:34Z"}"#,
+        ).unwrap();
+
+        assert_eq!(result.height, "1");
+        assert_eq!(result.time.to_string(), "2019-12-11 16:11:34");
+    }
+
+    #[test] // bnb chain
+    fn deserialize02(){
+        let result: Header = serde_json::from_str(
+            r#"{ "chain_id":"1", "height": "1","time": "2019-04-18T05:59:26.228734998Z"}"#,
+        ).unwrap();
+        assert_eq!(result.height, "1");
+        assert_eq!(result.time.to_string(), "2019-04-18 05:59:26.228734998");
+    }
+}
+
+#[tokio::main]
+async fn main() -> anyhow::Result<()>{
+
+    let cosmos_response = reqwest::get("https://rpc.cosmos.network/block?height=5200791")
+        .await?
+        .json::<RpcResponse>()
+        .await?;
+
+    println!("cosmos response: {:?}", cosmos_response);
+
+    let bnb_response = reqwest::get("https://dataseed1.binance.org/block?height=1")
+        .await?
+        .json::<RpcResponse>()
+        .await?;
+
+    println!("bnb response: {:?}", bnb_response);
+
+    Ok(())
 }
