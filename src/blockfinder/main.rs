@@ -1,5 +1,5 @@
 use serde::{de, Deserialize, Deserializer};
-use chrono::{NaiveDateTime};
+use chrono::{NaiveDateTime, NaiveDate};
 
 #[derive(Deserialize,Debug)]
 pub struct RpcResponse {
@@ -62,22 +62,56 @@ mod tests {
     }
 }
 
+const COMP_END_DATE_UTC: &str = "2021-02-26 06:00:00";
+
 #[tokio::main]
 async fn main() -> anyhow::Result<()>{
+    let end_comp_datetime_utc = NaiveDateTime::parse_from_str(COMP_END_DATE_UTC,"%Y-%m-%d %H:%M:%S").unwrap();
+    println!("end_comp_datetime_utc: {:?}", end_comp_datetime_utc);
 
-    let cosmos_response = reqwest::get("https://rpc.cosmos.network/block?height=5200791")
-        .await?
-        .json::<RpcResponse>()
-        .await?;
+    let cosmos_start_height = 5200791;
+    let mut cosmos_block_height = 5450741;
 
-    println!("cosmos response: {:?}", cosmos_response);
+    loop {
+        println!("block: {}", cosmos_block_height);
+        let request = format!("https://rpc.cosmos.network/block?height={height}", height = cosmos_block_height);
+        println!("request: {:?}", request);
+        let cosmos_response = reqwest::get(&request)
+            .await?
+            .json::<RpcResponse>()
+            .await?;
 
-    let bnb_response = reqwest::get("https://dataseed1.binance.org/block?height=1")
-        .await?
-        .json::<RpcResponse>()
-        .await?;
+        let response_datetime = cosmos_response.result.block.header.time;
+        let duration = end_comp_datetime_utc.signed_duration_since(response_datetime);
 
-    println!("bnb response: {:?}", bnb_response);
+        println!("response datetime: {:?}", response_datetime);
+        println!("duration {:?}", duration.num_hours());
+
+        if duration.num_hours() == 1 {
+            println!("Found block height within an hour: {}", cosmos_block_height);
+            break;
+        } else {
+            if duration.num_hours() > 0 {
+                let x = (cosmos_block_height - cosmos_start_height) * 2;
+                println!("x: {:?}", x);
+                cosmos_block_height = cosmos_block_height - x;
+            }
+
+            if duration.num_hours() < 0 {
+                let x = (cosmos_block_height - cosmos_start_height) / 2;
+                println!("x: {:?}", x);
+                cosmos_block_height = cosmos_block_height - x;
+            }
+        }
+    }
+
+    //
+    // let bnb_response = reqwest::get("https://dataseed1.binance.org/block?height=1")
+    //     .await?
+    //     .json::<RpcResponse>()
+    //     .await?;
+    //
+    // println!("bnb response: {:?}", bnb_response);
 
     Ok(())
 }

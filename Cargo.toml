@@ -28,10 +28,6 @@ path = "src/rune/main.rs"
 name = "blockfinder"
 path = "src/blockfinder/main.rs"
 
-[[bin]]
-name = "twitter_scrapper"
-path = "src/twitter_scrapper/main.rs"
-
 [lib]
 name = "utils"
 path = "src/utils/lib.rs"
