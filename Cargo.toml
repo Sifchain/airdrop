@@ -8,12 +8,13 @@ edition = "2018"
 
 [dependencies]
 tokio = { version = "1.2.0", features = ["full"] }
-reqwest = { version = "0.11.1", features = ["json"] }
+reqwest = { version = "0.11", features = ["blocking", "json"] }
 serde = { version = "1.0.123", features = ["derive"] }
 serde_json = "1.0.64"
 sqlx = { version = "0.5.1", features = ["runtime-tokio-native-tls", "postgres"] }
 anyhow = "1.0.38"
 chrono = "0.4"
+backoff = { version = "0.3.0", features =["tokio", "futures"] }
 
 [[bin]]
 name = "atom"
@@ -26,3 +27,11 @@ path = "src/rune/main.rs"
 [[bin]]
 name = "blockfinder"
 path = "src/blockfinder/main.rs"
+
+[[bin]]
+name = "twitter_scrapper"
+path = "src/twitter_scrapper/main.rs"
+
+[lib]
+name = "utils"
+path = "src/utils/lib.rs"
