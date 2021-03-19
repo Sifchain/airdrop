@@ -72,23 +72,25 @@ async fn fetch_cosmos_account_txs(address: &str) -> anyhow::Result<ApiTxsRespons
     .await
 }
 
-async fn fetch_cosmos_txs_details(hash: &str) -> anyhow::Result<ApiTxsResponse> {
-    let request = format!(
-        "https://api.cosmos.network/cosmos/tx/v1beta1/txs/{hash}",
-        hash = hash
-    );
-    println!("request: {}", request);
-
-    let response = reqwest::get(&request)
-        .await?
-        .json::<ApiTxsResponse>()
-        .await?;
-
-    Ok(response)
+async fn fetch_cosmos_txs_details(hash: &str) -> anyhow::Result<ApiTxsResponse, reqwest::Error> {
+    retry(ExponentialBackoff::default(), || async {
+        let request = format!(
+            "https://api.cosmos.network/cosmos/tx/v1beta1/txs/{hash}",
+            hash = hash
+        );
+        println!("request: {}", request);
+        Ok(reqwest::get(&request)
+            .await?
+            .json::<ApiTxsResponse>()
+            .await?)
+    })
+    .await
 }
 
-//
-async fn process_cosmos_raw_txs(response: &RpcResponse, pool: &PgPool) -> anyhow::Result<()> {
+async fn process_cosmos_raw_txs(
+    response: &RpcResponse,
+    pool: &PgPool,
+) -> anyhow::Result<(), reqwest::Error> {
     let txs = response.result.txs.clone();
 
     for tx in txs {
