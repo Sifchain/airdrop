@@ -3,6 +3,7 @@ use serde::Deserialize;
 use sqlx::postgres::PgPoolOptions;
 use sqlx::PgPool;
 use std::env;
+use utils::db::connect;
 use utils::memo::process_memo;
 
 const PER_PAGE: &str = "50";
@@ -68,14 +69,6 @@ async fn process_rune_raw_txs(response: &ApiResponse, pool: &PgPool) -> Result<(
         };
     }
     Ok(())
-}
-
-async fn connect() -> Result<sqlx::postgres::PgPool> {
-    let pool = PgPoolOptions::new()
-        .max_connections(50)
-        .connect(&env::var("DATABASE_URL")?)
-        .await?;
-    Ok(pool)
 }
 
 async fn process_incoming_rune_txs(pool: &PgPool) -> Result<()> {

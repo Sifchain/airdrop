@@ -2,6 +2,7 @@ use backoff::future::retry;
 use backoff::ExponentialBackoff;
 use serde::Deserialize;
 use sqlx::PgPool;
+use utils::db::connect;
 use utils::memo::process_memo;
 
 const PER_PAGE: &str = "100";

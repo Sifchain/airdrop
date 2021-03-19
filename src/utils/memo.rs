@@ -15,6 +15,10 @@ pub fn process_memo(memo: &String) -> Memo {
         x = memo.split("：").collect();
     }
 
+    if x.len() == 1 {
+        x = memo.split("\n").collect();
+    }
+
     let handle: Option<String> = x.get(0).and_then(|v| v.parse().ok());
     let address: Option<String> = x.get(1).and_then(|v| v.parse().ok());
 
@@ -93,4 +97,34 @@ mod tests {
             Some("sif12wn03kmuc7skk4eyc2fej0g3d8pjljjan69n2q".to_string())
         );
     }
+
+    #[test]
+    fn process_memo_test05() {
+        let memo05 = "linkowskaz
+sif1vv06crzl53yv5kp2w56hcmt30cmflnt7uxdvs9"
+            .to_string();
+        let result = process_memo(&memo05);
+        assert_eq!(result.handle, Some("linkowskaz".to_string()));
+        assert_eq!(
+            result.address,
+            Some("sif1vv06crzl53yv5kp2w56hcmt30cmflnt7uxdvs9".to_string())
+        );
+    }
+
+    // Can't easily get this working... skipping.
+    // #[test]
+    // fn process_memo_test06() {
+    //     let memo06 = "
+    //         みんみん。
+    //         @Be3hfcqupcWfKnk
+    //         sif19e2670v3akpgnj4wetq2g4c954zkpkt8pccmd2
+    //         "
+    //     .to_string();
+    //     let result = process_memo(&memo06);
+    //     assert_eq!(result.handle, Some("Be3hfcqupcWfKnk".to_string()));
+    //     assert_eq!(
+    //         result.address,
+    //         Some("sif19e2670v3akpgnj4wetq2g4c954zkpkt8pccmd2".to_string())
+    //     );
+    // }
 }

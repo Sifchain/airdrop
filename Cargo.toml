@@ -35,3 +35,7 @@ path = "src/utils/lib.rs"
 [[bin]]
 name = "rune_pool_extract"
 path = "src/rune_pool_extract/main.rs"
+
+[[bin]]
+name = "memo_cleaner"
+path = "src/memo_cleaner/main.rs"

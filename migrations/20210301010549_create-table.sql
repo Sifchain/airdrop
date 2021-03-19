@@ -21,5 +21,8 @@ CREATE TABLE rune_stakers (
     rune_address varchar,
     asset_address varchar,
     last_stake bigint,
-    last_unstake bigint
+    last_unstake bigint,
+    units bigint,
+    PRIMARY KEY (asset, rune_address)
+
 )
