@@ -12,3 +12,14 @@ CREATE TABLE txs (
                      sif_address VARCHAR,
                      PRIMARY KEY (network, hash)
 );
+
+DROP TABLE IF EXISTS rune_stakers;
+
+CREATE TABLE rune_stakers (
+    id SERIAL UNIQUE NOT NULL,
+    asset varchar,
+    rune_address varchar,
+    asset_address varchar,
+    last_stake bigint,
+    last_unstake bigint
+)

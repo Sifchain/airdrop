@@ -18,11 +18,11 @@ backoff = { version = "0.3.0", features =["tokio", "futures"] }
 
 [[bin]]
 name = "atom"
-path = "src/atom/main.rs"
+path = "src/atom_tx_extract/main.rs"
 
 [[bin]]
 name = "rune"
-path = "src/rune/main.rs"
+path = "src/rune_tx_extract/main.rs"
 
 [[bin]]
 name = "blockfinder"
@@ -31,3 +31,7 @@ path = "src/blockfinder/main.rs"
 [lib]
 name = "utils"
 path = "src/utils/lib.rs"
+
+[[bin]]
+name = "rune_pool_extract"
+path = "src/rune_pool_extract/main.rs"

@@ -5,8 +5,6 @@ pub struct Memo {
 }
 
 pub fn process_memo(memo: &String) -> Memo {
-    // println!("memo {:?}", memo);
-
     let mut x: Vec<&str> = memo.split(":").collect();
 
     if x.len() < 2 {
@@ -14,9 +12,7 @@ pub fn process_memo(memo: &String) -> Memo {
     }
 
     if x.len() == 1 {
-        println!("memo {:?}", memo);
         x = memo.split("：").collect();
-        println!("x: {:?}", x);
     }
 
     let handle: Option<String> = x.get(0).and_then(|v| v.parse().ok());
@@ -26,7 +22,6 @@ pub fn process_memo(memo: &String) -> Memo {
         handle: process_twitter_handler(handle),
         address: process_address(address),
     };
-    // println!("{:?}", results);
     results
 }
 
