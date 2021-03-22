@@ -1,5 +1,4 @@
 use sqlx::postgres::PgPoolOptions;
-use sqlx::PgPool;
 use std::env;
 
 pub async fn connect() -> anyhow::Result<sqlx::postgres::PgPool> {
