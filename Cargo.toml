@@ -16,6 +16,8 @@ anyhow = "1.0.38"
 chrono = "0.4"
 backoff = { version = "0.3.0", features =["tokio", "futures"] }
 instant = "0.1.9"
+egg-mode = { git ="https://github.com/egg-mode-rs/egg-mode.git",  features = ["rustls"], default-features = false }
+colored = "2"
 
 [[bin]]
 name = "atom"
@@ -40,3 +42,7 @@ path = "src/rune_pool_extract/main.rs"
 [[bin]]
 name = "memo_cleaner"
 path = "src/memo_cleaner/main.rs"
+
+[[bin]]
+name = "check_twitter"
+path = "src/check_twitter/main.rs"
