@@ -1,3 +1,5 @@
+use crate::twitter;
+
 #[derive(Debug)]
 pub struct Memo {
     pub handle: Option<String>,
@@ -23,17 +25,10 @@ pub fn process_memo(memo: &String) -> Memo {
     let address: Option<String> = x.get(1).and_then(|v| v.parse().ok());
 
     let results: Memo = Memo {
-        handle: process_twitter_handler(handle),
+        handle: twitter::process_twitter_handler(handle),
         address: process_address(address),
     };
     results
-}
-
-fn process_twitter_handler(twitter_extract: Option<String>) -> Option<String> {
-    match &twitter_extract.unwrap()[..] {
-        "" => None,
-        v => Some(v.replace("@", "").trim().parse().unwrap()),
-    }
 }
 
 fn process_address(address: Option<String>) -> Option<String> {

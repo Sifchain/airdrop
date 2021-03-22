@@ -1,16 +1,6 @@
-pub async fn find_tweet(handle: String) -> anyhow::Result<bool> {
-    println!("handle: {}", handle);
-    Ok(true)
-}
-
-mod test {
-    use super::*;
-
-    #[tokio::test]
-    // No tweet
-    async fn find_tweet_test00() {
-        let handle = "utx0".to_string();
-        let result = find_tweet(handle).await;
-        assert_eq!(result.unwrap(), false);
+pub fn process_twitter_handler(twitter_extract: Option<String>) -> Option<String> {
+    match &twitter_extract.unwrap()[..] {
+        "" => None,
+        v => Some(v.replace("@", "").trim().parse().unwrap()),
     }
 }
