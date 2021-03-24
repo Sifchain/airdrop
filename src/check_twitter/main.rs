@@ -25,7 +25,7 @@ async fn main() -> anyhow::Result<()> {
 
     for record in records {
         println!("\n\nTwitter handle: {:?}", &record.twitter_handle);
-        let handle = match record.twitter_handle {
+        match record.twitter_handle {
             Some(v) => {
                 match get_twitter_user(v, &token).await {
                     Ok(v) => {
@@ -54,7 +54,7 @@ async fn main() -> anyhow::Result<()> {
                                 .fetch_one(&db)
                                 .await
                                 {
-                                    Ok(v) => println!("Record updated"),
+                                    Ok(_) => println!("Record updated"),
                                     Err(e) => println!("Record update error: {}", e),
                                 }
                             }
@@ -75,7 +75,7 @@ async fn main() -> anyhow::Result<()> {
                                 .fetch_one(&db)
                                 .await
                                 {
-                                    Ok(v) => println!("Record updated"),
+                                    Ok(_) => println!("Record updated"),
                                     Err(e) => println!("Record update error: {}", e),
                                 }
                             }
@@ -104,7 +104,7 @@ async fn main() -> anyhow::Result<()> {
                         .fetch_one(&db)
                         .await
                         {
-                            Ok(v) => println!("Record updated"),
+                            Ok(_) => println!("Record updated"),
                             Err(e) => println!("Record update error: {}", e),
                         }
                     }
@@ -126,7 +126,7 @@ async fn main() -> anyhow::Result<()> {
                 .fetch_one(&db)
                 .await
                 {
-                    Ok(v) => println!("Record updated"),
+                    Ok(_) => println!("Record updated"),
                     Err(e) => println!("Record update error: {}", e),
                 }
             }
@@ -216,7 +216,7 @@ async fn find_tweet(
 async fn check_tweet(tweet: &egg_mode::tweet::Tweet) -> anyhow::Result<(bool, bool)> {
     match tweet.text.to_lowercase().find("sifchain") {
         None => Ok((false, false)),
-        Some(v) => {
+        Some(_) => {
             println!("Tweet found: {}", tweet.text);
             match &tweet.extended_entities {
                 None => {
@@ -226,8 +226,8 @@ async fn check_tweet(tweet: &egg_mode::tweet::Tweet) -> anyhow::Result<(bool, bo
                     }
                     Ok((true, false))
                 }
-                Some(v) => {
-                    println!("Media found: true");
+                Some(_) => {
+                    // println!("Media found: true");
                     Ok((true, true))
                 }
             }
@@ -242,9 +242,9 @@ async fn get_twitter_user(
     Ok(egg_mode::user::show(handle, &token).await?.response)
 }
 
-async fn get_twitter_user_id(handle: String, token: &egg_mode::Token) -> anyhow::Result<u64> {
-    Ok(egg_mode::user::show(handle, &token).await?.response.id)
-}
+// async fn get_twitter_user_id(handle: String, token: &egg_mode::Token) -> anyhow::Result<u64> {
+//     Ok(egg_mode::user::show(handle, &token).await?.response.id)
+// }
 
 async fn get_twitter_token() -> anyhow::Result<egg_mode::Token> {
     let consumer_key = env::var("CONSUMER_KEY")?;
