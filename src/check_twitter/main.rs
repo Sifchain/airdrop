@@ -60,6 +60,11 @@ async fn main() -> anyhow::Result<()> {
                             }
                             Err(e) => {
                                 println!("error000: {}", e.to_string().red());
+
+                                if e.to_string().contains("Rate limit reached") {
+                                    panic!("wait an hour")
+                                }
+
                                 match sqlx::query!(
                                     r#"
                                     UPDATE txs 
@@ -70,7 +75,7 @@ async fn main() -> anyhow::Result<()> {
                                     record.id,
                                     record.hash,
                                     record.height,
-                                    "No match pattern",
+                                    format!("{}", e),
                                 )
                                 .fetch_one(&db)
                                 .await
@@ -131,7 +136,6 @@ async fn main() -> anyhow::Result<()> {
                 }
             }
         };
-        break;
     }
     Ok(())
 }
@@ -145,12 +149,15 @@ async fn find_tweet(
 
     let mut tweet_found: bool = false;
     let mut media_found: bool = false;
-    let mut tweet_id: i64 = -1;
     let mut tweets_checked: i32 = 0;
 
     let (mut timeline, mut feed) = timeline.start().await?;
+    let mut id: u64 = 0;
+    // let mut last_id: u64 = 0;
+
+    let mut fetch_count: i32 = 0;
+
     loop {
-        let mut id: u64 = 0;
         for tweet in feed.iter() {
             let (tfound, mfound) = check_tweet(tweet).await?;
             tweets_checked += 1;
@@ -159,7 +166,6 @@ async fn find_tweet(
 
             if tfound == true {
                 tweet_found = tfound;
-                tweet_id = tweet.id as i64;
             }
 
             if mfound == true {
@@ -172,9 +178,22 @@ async fn find_tweet(
                 return Ok((tweet_found, media_found, id, tweets_checked));
             }
         }
+        println!("Check next lot of tweets. id: {}", id);
+        // This gets stuck on the same tweet for some unknown reason
+        // if last_id == id {
+        //     return Ok((tweet_found, media_found, -1, tweets_checked));
+        // }
+        // last_id = id;
+
         let (ntimeline, nfeed) = timeline.older(Some(id)).await?;
         timeline = ntimeline;
         feed = nfeed;
+        fetch_count += 1;
+
+        // due to some random behavior of the twitter api or the egg_mode crate this is required.
+        if fetch_count == 20 {
+            return Ok((tweet_found, media_found, -1, tweets_checked));
+        }
     }
 }
 
