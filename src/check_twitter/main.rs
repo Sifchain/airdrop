@@ -148,68 +148,34 @@ async fn find_tweet(
     let mut tweet_id: i64 = -1;
     let mut tweets_checked: i32 = 0;
 
-    let (timeline, feed) = timeline.start().await?;
-    for tweet in feed.iter() {
-        let (tfound, mfound) = check_tweet(tweet).await?;
-        tweets_checked += 1;
+    let (mut timeline, mut feed) = timeline.start().await?;
+    loop {
+        let mut id: u64 = 0;
+        for tweet in feed.iter() {
+            let (tfound, mfound) = check_tweet(tweet).await?;
+            tweets_checked += 1;
 
-        if tfound == true {
-            tweet_found = tfound;
-            tweet_id = tweet.id as i64;
-        }
+            id = tweet.id;
 
-        if mfound == true {
-            media_found = mfound;
-        }
+            if tfound == true {
+                tweet_found = tfound;
+                tweet_id = tweet.id as i64;
+            }
 
-        // Return if both are found.
-        if tweet_found && media_found {
-            let id = tweet.id as i64;
-            return Ok((tweet_found, media_found, id, tweets_checked));
+            if mfound == true {
+                media_found = mfound;
+            }
+
+            // Return if both are found.
+            if tweet_found && media_found {
+                let id = tweet.id as i64;
+                return Ok((tweet_found, media_found, id, tweets_checked));
+            }
         }
+        let (ntimeline, nfeed) = timeline.older(Some(id)).await?;
+        timeline = ntimeline;
+        feed = nfeed;
     }
-
-    let (timeline, feed) = timeline.older(None).await?;
-    println!("checking older tweets...");
-    for tweet in feed.iter() {
-        let (tfound, mfound) = check_tweet(tweet).await?;
-        tweets_checked += 1;
-
-        if tfound == true {
-            tweet_found = tfound;
-            tweet_id = tweet.id as i64;
-        }
-
-        if mfound == true {
-            media_found = mfound;
-        }
-
-        if tweet_found && media_found {
-            let id = tweet.id as i64;
-            return Ok((tweet_found, media_found, id, tweets_checked));
-        }
-    }
-
-    let (timeline, feed) = timeline.older(None).await?;
-    println!("checking more older tweets...");
-    for tweet in feed.iter() {
-        let (tfound, mfound) = check_tweet(tweet).await?;
-        tweets_checked += 1;
-        if tfound == true {
-            tweet_found = tfound;
-            tweet_id = tweet.id as i64;
-        }
-
-        if mfound == true {
-            media_found = mfound;
-        }
-
-        if tweet_found && media_found {
-            let id = tweet.id as i64;
-            return Ok((tweet_found, media_found, id, tweets_checked));
-        }
-    }
-    Ok((tweet_found, media_found, tweet_id, tweets_checked))
 }
 
 // Return (tweet_found, media_found)
@@ -242,10 +208,6 @@ async fn get_twitter_user(
     Ok(egg_mode::user::show(handle, &token).await?.response)
 }
 
-// async fn get_twitter_user_id(handle: String, token: &egg_mode::Token) -> anyhow::Result<u64> {
-//     Ok(egg_mode::user::show(handle, &token).await?.response.id)
-// }
-
 async fn get_twitter_token() -> anyhow::Result<egg_mode::Token> {
     let consumer_key = env::var("CONSUMER_KEY")?;
     let consumer_secret = env::var("CONSUMER_SECRET")?;
@@ -259,7 +221,7 @@ async fn find_tweet_test001() {
     let user = get_twitter_user("mihailborodatyi".to_string(), &token)
         .await
         .unwrap();
-    let (tweet_found, media_found, tweet_id, tweets_checked) =
+    let (tweet_found, media_found, _tweet_id, _tweets_checked) =
         find_tweet(&user, &token).await.unwrap();
 
     assert_eq!(tweet_found, true);
@@ -273,7 +235,7 @@ async fn find_tweet_test002() {
     let user = get_twitter_user("kastrosphere".to_string(), &token)
         .await
         .unwrap();
-    let (tweet_found, media_found, tweet_id, tweets_checked) =
+    let (tweet_found, media_found, _tweet_id, _tweets_checked) =
         find_tweet(&user, &token).await.unwrap();
 
     assert_eq!(tweet_found, true);
