@@ -1,8 +1,5 @@
-use anyhow::Error;
 use colored::Colorize;
 use egg_mode;
-use egg_mode::tweet::ExtendedTweetEntities;
-use egg_mode::user::TwitterUser;
 use std::env;
 use utils::db::connect;
 
@@ -222,7 +219,13 @@ async fn check_tweet(tweet: &egg_mode::tweet::Tweet) -> anyhow::Result<(bool, bo
         Some(v) => {
             println!("Tweet found: {}", tweet.text);
             match &tweet.extended_entities {
-                None => Ok((true, false)),
+                None => {
+                    if tweet.entities.urls.len() > 0 {
+                        println!("Media url: {:#?}", tweet.entities.urls.len());
+                        return Ok((true, true));
+                    }
+                    Ok((true, false))
+                }
                 Some(v) => {
                     println!("Media found: true");
                     Ok((true, true))
