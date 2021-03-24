@@ -1,4 +1,3 @@
-use anyhow::anyhow;
 use anyhow::Error;
 use colored::Colorize;
 use egg_mode;
@@ -13,8 +12,7 @@ async fn main() -> anyhow::Result<()> {
 
     let records = sqlx::query!(
         r#"
-        SELECT 
-            DISTINCT ON (twitter_handle) 
+        SELECT      
             *
         FROM txs 
         WHERE tweet_found is null 
@@ -29,20 +27,22 @@ async fn main() -> anyhow::Result<()> {
     let token = get_twitter_token().await.unwrap();
 
     for record in records {
+        println!("\n\nTwitter handle: {:?}", &record.twitter_handle);
         let handle = match record.twitter_handle {
             Some(v) => {
-                println!("\n\nhandle: {}", v);
-
                 match get_twitter_user(v, &token).await {
                     Ok(v) => {
                         match find_tweet(&v, &token).await {
-                            Ok((tweet_found, media_found, id)) => {
-                                println!("{}", "Found Required tweet".green());
-                                // let id = id as i64;
-                                sqlx::query!(
+                            Ok((tweet_found, media_found, id, tweets_checked)) => {
+                                println!("tweet_found: {}", tweet_found);
+                                println!("media_found: {}", media_found);
+                                println!("tweet_id: {}", id);
+                                println!("tweets_checked: {}", tweets_checked);
+
+                                match sqlx::query!(
                                     r#"
                                         UPDATE txs
-                                        SET tweet_found = $5, tweet_id = $4, media_found = $6
+                                        SET tweet_found = $5, tweet_id = $4, media_found = $6, tweets_checked = $7
                                         WHERE id = $1 AND hash = $2 AND height = $3
                                         RETURNING id
                                     "#,
@@ -52,45 +52,52 @@ async fn main() -> anyhow::Result<()> {
                                     id,
                                     tweet_found,
                                     media_found,
+                                    tweets_checked,
                                 )
                                 .fetch_one(&db)
-                                .await;
+                                .await
+                                {
+                                    Ok(v) => println!("Record updated"),
+                                    Err(e) => println!("Record update error: {}", e),
+                                }
                             }
                             Err(e) => {
-                                println!("error001: {}", e.to_string().red());
-
-                                sqlx::query!(
+                                println!("error000: {}", e.to_string().red());
+                                match sqlx::query!(
                                     r#"
-                                    UPDATE txs
+                                    UPDATE txs 
                                     SET twitter_error = $4, tweet_found = false, media_found = false
                                     WHERE id = $1 AND hash = $2 AND height = $3
+                                    RETURNING id
                                 "#,
                                     record.id,
                                     record.hash,
                                     record.height,
-                                    format!("{}", e),
+                                    "No match pattern",
                                 )
                                 .fetch_one(&db)
-                                .await;
-                            }
-                            _ => {
-                                println!("{}", "No match pattern".red());
+                                .await
+                                {
+                                    Ok(v) => println!("Record updated"),
+                                    Err(e) => println!("Record update error: {}", e),
+                                }
                             }
                         };
                     }
                     // Error like user has been deleted.
                     Err(e) => {
-                        println!("error002: {}", e.to_string().red());
+                        println!("error001: {}", e.to_string().red());
 
                         if e.to_string().contains("Rate limit") {
                             panic!("Wait an hour for next run")
                         }
 
-                        sqlx::query!(
+                        match sqlx::query!(
                             r#"
                                     UPDATE txs
                                     SET twitter_error = $4, tweet_found = false, media_found = false
                                     WHERE id = $1 AND hash = $2 AND height = $3
+                                    RETURNING id
                                 "#,
                             record.id,
                             record.hash,
@@ -98,12 +105,36 @@ async fn main() -> anyhow::Result<()> {
                             format!("{}", e),
                         )
                         .fetch_one(&db)
-                        .await;
+                        .await
+                        {
+                            Ok(v) => println!("Record updated"),
+                            Err(e) => println!("Record update error: {}", e),
+                        }
                     }
                 };
             }
-            None => println!("No handle"),
+            None => {
+                println!("{}", "No handle".red());
+                match sqlx::query!(
+                    r#"
+                    UPDATE txs 
+                    SET tweet_found = false, media_found = false, twitter_error = 'invalid handle'
+                    WHERE id = $1 AND hash = $2 AND height = $3
+                    RETURNING id
+                "#,
+                    record.id,
+                    record.hash,
+                    record.height,
+                )
+                .fetch_one(&db)
+                .await
+                {
+                    Ok(v) => println!("Record updated"),
+                    Err(e) => println!("Record update error: {}", e),
+                }
+            }
         };
+        break;
     }
     Ok(())
 }
@@ -112,53 +143,76 @@ async fn main() -> anyhow::Result<()> {
 async fn find_tweet(
     user: &egg_mode::user::TwitterUser,
     token: &egg_mode::Token,
-) -> anyhow::Result<(bool, bool, i64)> {
+) -> anyhow::Result<(bool, bool, i64, i32)> {
     let timeline = egg_mode::tweet::user_timeline(user.id, true, false, token).with_page_size(200);
-    let mut tweets_checked: u32 = 0;
+
+    let mut tweet_found: bool = false;
+    let mut media_found: bool = false;
+    let mut tweet_id: i64 = -1;
+    let mut tweets_checked: i32 = 0;
 
     let (timeline, feed) = timeline.start().await?;
     for tweet in feed.iter() {
-        let (tweet_found, media_found) = check_tweet(tweet).await?;
+        let (tfound, mfound) = check_tweet(tweet).await?;
         tweets_checked += 1;
 
+        if tfound == true {
+            tweet_found = tfound;
+            tweet_id = tweet.id as i64;
+        }
+
+        if mfound == true {
+            media_found = mfound;
+        }
+
+        // Return if both are found.
         if tweet_found && media_found {
-            println!("tweets_checked: {}", tweets_checked);
             let id = tweet.id as i64;
-            return Ok((tweet_found, media_found, id));
+            return Ok((tweet_found, media_found, id, tweets_checked));
         }
     }
 
     let (timeline, feed) = timeline.older(None).await?;
     println!("checking older tweets...");
     for tweet in feed.iter() {
-        let (tweet_found, media_found) = check_tweet(tweet).await?;
+        let (tfound, mfound) = check_tweet(tweet).await?;
         tweets_checked += 1;
 
+        if tfound == true {
+            tweet_found = tfound;
+            tweet_id = tweet.id as i64;
+        }
+
+        if mfound == true {
+            media_found = mfound;
+        }
+
         if tweet_found && media_found {
-            println!("tweets_checked: {}", tweets_checked);
             let id = tweet.id as i64;
-            return Ok((tweet_found, media_found, id));
+            return Ok((tweet_found, media_found, id, tweets_checked));
         }
     }
 
     let (timeline, feed) = timeline.older(None).await?;
     println!("checking more older tweets...");
     for tweet in feed.iter() {
-        let (tweet_found, media_found) = check_tweet(tweet).await?;
+        let (tfound, mfound) = check_tweet(tweet).await?;
         tweets_checked += 1;
+        if tfound == true {
+            tweet_found = tfound;
+            tweet_id = tweet.id as i64;
+        }
+
+        if mfound == true {
+            media_found = mfound;
+        }
 
         if tweet_found && media_found {
-            println!("tweets_checked: {}", tweets_checked);
             let id = tweet.id as i64;
-            return Ok((tweet_found, media_found, id));
+            return Ok((tweet_found, media_found, id, tweets_checked));
         }
     }
-
-    println!("tweets_checked: {}", tweets_checked);
-    Err(anyhow!(
-        "tweet not found, checked {} tweets",
-        tweets_checked
-    ))
+    Ok((tweet_found, media_found, tweet_id, tweets_checked))
 }
 
 // Return (tweet_found, media_found)
@@ -194,4 +248,31 @@ async fn get_twitter_token() -> anyhow::Result<egg_mode::Token> {
     let consumer_secret = env::var("CONSUMER_SECRET")?;
     let con_token = egg_mode::KeyPair::new(consumer_key, consumer_secret);
     Ok(egg_mode::auth::bearer_token(&con_token).await?)
+}
+
+#[tokio::test]
+async fn find_tweet_test001() {
+    let token = get_twitter_token().await.unwrap();
+    let user = get_twitter_user("mihailborodatyi".to_string(), &token)
+        .await
+        .unwrap();
+    let (tweet_found, media_found, tweet_id, tweets_checked) =
+        find_tweet(&user, &token).await.unwrap();
+
+    assert_eq!(tweet_found, true);
+    assert_eq!(media_found, false);
+}
+
+// test for a url media link
+#[tokio::test]
+async fn find_tweet_test002() {
+    let token = get_twitter_token().await.unwrap();
+    let user = get_twitter_user("kastrosphere".to_string(), &token)
+        .await
+        .unwrap();
+    let (tweet_found, media_found, tweet_id, tweets_checked) =
+        find_tweet(&user, &token).await.unwrap();
+
+    assert_eq!(tweet_found, true);
+    assert_eq!(media_found, true);
 }
