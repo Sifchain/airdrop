@@ -1,2 +1,1 @@
 \COPY token_sale_contribution_codes(contribution_code) FROM './extracts/token_sale_contribution_codes3.csv' DELIMITER ',' CSV
-\COPY token_sale_submissions(timestamp, twitter_handle,sif_address,contribution_code) FROM './extracts/community_token_giveaway_Responses1.csv' DELIMITER ',' CSV
