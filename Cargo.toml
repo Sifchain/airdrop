@@ -18,6 +18,11 @@ backoff = { version = "0.3.0", features =["tokio", "futures"] }
 instant = "0.1.9"
 egg-mode = { git ="https://github.com/egg-mode-rs/egg-mode.git",  features = ["rustls"], default-features = false }
 colored = "2"
+csv = "1.1"
+
+[[bin]]
+name = "import-token-sale-data"
+path = "src/import_token_sale_submissions/main.rs"
 
 [[bin]]
 name = "atom"
