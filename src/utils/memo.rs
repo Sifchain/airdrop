@@ -25,7 +25,7 @@ pub fn process_memo(memo: &String) -> Memo {
     let address: Option<String> = x.get(1).and_then(|v| v.parse().ok());
 
     let results: Memo = Memo {
-        handle: twitter::process_twitter_handler(handle),
+        handle: twitter::process_twitter_handler(&handle.unwrap()),
         address: process_address(address),
     };
     results
