@@ -19,6 +19,7 @@ instant = "0.1.9"
 egg-mode = { git ="https://github.com/egg-mode-rs/egg-mode.git",  features = ["rustls"], default-features = false }
 colored = "2"
 csv = "1.1"
+thiserror = "1.0"
 
 [[bin]]
 name = "import-token-sale-data"
