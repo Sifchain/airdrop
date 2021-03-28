@@ -214,11 +214,15 @@ async fn is_record_already_processed(
 async fn clean_record(record: &Record, db: &PgPool) -> Option<Record> {
     // process address data
     if let Some(address) = process_address(&record.address) {
+        println!("cleaned address: {}", address);
         // process code data
         if let Some(code) = process_code(&record.code) {
-            if let Some(_) = find_valid_code(&record.code, &db).await {
+            println!("cleaned code: {}", code);
+            if let Some(found) = find_valid_code(&record.code, &db).await {
+                println!("found valid code: {}", found);
                 // clean twitter handle
                 if let Some(handle) = process_twitter_handler(&record.handle) {
+                    println!("cleaned handle: {}", handle);
                     return Some(Record {
                         timestamp: (*record.timestamp).parse().unwrap(),
                         handle,
@@ -249,11 +253,22 @@ async fn find_valid_code(code: &String, db: &PgPool) -> Option<bool> {
     .await
     {
         Ok(_) => Some(true),
-        Err(e) => Some(false),
+        Err(e) => None,
     }
+}
+
+#[tokio::test]
+async fn test_find_invalid_code() {
+    let db = connect().await.unwrap();
+    let code = "blahblah".to_string();
+    let result = find_valid_code(&code, &db).await;
+    assert_eq!(result, None)
 }
 
 #[tokio::test]
 async fn test_find_valid_code() {
     let db = connect().await.unwrap();
+    let code = "ca1d28a0f2bd265edd00e634f7b2548d1f42b4870f4bfa083dfe2328e7efe6e8".to_string();
+    let result = find_valid_code(&code, &db).await;
+    assert_eq!(result.unwrap(), true)
 }
