@@ -3,7 +3,7 @@ use colored::Colorize;
 use serde::Deserialize;
 use sqlx::PgPool;
 use std::fmt::{Display, Formatter};
-use std::io;
+use std::{io, thread, time};
 use utils::address::process_address;
 use utils::db::connect;
 use utils::twitter::{find_tweet, get_twitter_token, get_twitter_user, process_twitter_handler};
@@ -77,7 +77,8 @@ async fn main() -> anyhow::Result<()> {
                     Err(e) => {
                         println!("{}: {}", "error001", e.to_string().red());
                         if e.to_string().contains("Rate limit") {
-                            panic!("Wait for an hour")
+                            thread::sleep(time::Duration::from_secs(350));
+                            continue;
                         }
                         save_valid_record_with_twitter_error_data(&record, e.to_string(), &db)
                             .await;
