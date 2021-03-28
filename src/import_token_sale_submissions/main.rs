@@ -252,3 +252,8 @@ async fn find_valid_code(code: &String, db: &PgPool) -> Option<bool> {
         Err(e) => Some(false),
     }
 }
+
+#[tokio::test]
+async fn test_find_valid_code() {
+    let db = connect().await.unwrap();
+}
