@@ -7,5 +7,5 @@ extract_data:
 	cargo r --bin check_twitter
 
 
-import-data:
+import-token-sale-codes:
 	psql "postgresql://postgres:password@localhost:5432/airdrop" -f ./import_extracted_data.sql
