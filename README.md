@@ -17,6 +17,8 @@
     * `sqlx migrate run`
 3. cargo build --release 
 
+## RUN Imports
+
 # Run RUNE Tx Import script
 
 1. `./target/release/import-rune-txs`
@@ -58,3 +60,10 @@ Note; This will import data into the `rune_stakers` table
 Note; 
    * This will clean and import the data and also run the twitter checks at the same time. 
    * This can take a while to finish and might be stopped by the twitter rate limiter and therefore should be run a couple of times to make sure all data is imported
+
+## RUN finial calc's // TODO
+
+
+## TODO 
+
+* Need to do a balance check at the time of the incoming tx ie blockheight  
