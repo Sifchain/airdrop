@@ -51,4 +51,4 @@ path = "src/memo_cleaner/main.rs"
 
 [[bin]]
 name = "check_twitter"
-path = "src/check_twitter/main.rs"
+path = "src/process_twitter_from_txs/main.rs"
