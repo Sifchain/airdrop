@@ -2,7 +2,6 @@ use anyhow::anyhow;
 use colored::Colorize;
 use serde::Deserialize;
 use sqlx::PgPool;
-use std::fmt::{Display, Formatter};
 use std::{io, thread, time};
 use utils::address::process_address;
 use utils::db::connect;
@@ -42,7 +41,7 @@ async fn main() -> anyhow::Result<()> {
 
         match clean_record(&record, &db).await {
             None => {
-                if let Ok(found) = is_record_already_processed(&record, Table::InValid, &db).await {
+                if let Ok(_) = is_record_already_processed(&record, Table::InValid, &db).await {
                     println!("Record already processed: {}", record.handle);
                     continue;
                 }
@@ -50,14 +49,14 @@ async fn main() -> anyhow::Result<()> {
                 save_invalid_record(&record, &db).await;
             }
             Some(v) => {
-                if let Ok(found) = is_record_already_processed(&v, Table::Valid, &db).await {
+                if let Ok(_) = is_record_already_processed(&v, Table::Valid, &db).await {
                     println!("Record already processed: {}", v.handle);
                     continue;
                 }
 
                 println!("{}: {:?}", "Valid Submission Record".green(), record);
                 match get_twitter_user(&v.handle, &token).await {
-                    Ok(TwitterUser) => match find_tweet(&TwitterUser, &token).await {
+                    Ok(twitter_user) => match find_tweet(&twitter_user, &token).await {
                         Ok((tweet_found, media_found, tweet_id, tweets_checked)) => {
                             let tweet_data = TweetData {
                                 tweet_found,
@@ -107,7 +106,7 @@ async fn save_invalid_record(record: &Record, db: &PgPool) {
     .execute(db)
     .await
     {
-        Ok(v) => {
+        Ok(_) => {
             println!("Invalid Record saved");
         }
         Err(e) => {
@@ -254,7 +253,7 @@ async fn find_valid_code(code: &String, db: &PgPool) -> Option<bool> {
     .await
     {
         Ok(_) => Some(true),
-        Err(e) => None,
+        Err(_) => None,
     }
 }
 

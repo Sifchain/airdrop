@@ -26,29 +26,25 @@ name = "import-token-sale-data"
 path = "src/import_token_sale_submissions/main.rs"
 
 [[bin]]
-name = "atom"
-path = "src/atom_tx_extract/main.rs"
+name = "import-atom-txs"
+path = "src/import-atom-txs/main.rs"
 
 [[bin]]
-name = "rune"
-path = "src/rune_tx_extract/main.rs"
-
-[[bin]]
-name = "blockfinder"
-path = "src/blockfinder/main.rs"
+name = "import-rune-txs"
+path = "src/import-rune-txs/main.rs"
 
 [lib]
 name = "utils"
 path = "src/utils/lib.rs"
 
 [[bin]]
-name = "rune_pool_extract"
-path = "src/rune_pool_extract/main.rs"
+name = "import-rune-pool-extract"
+path = "src/import-rune-pool-extract/main.rs"
 
 [[bin]]
 name = "memo_cleaner"
 path = "src/memo_cleaner/main.rs"
 
 [[bin]]
-name = "check_twitter"
-path = "src/process_twitter_from_txs/main.rs"
+name = "process-twitter-from-txs-records"
+path = "src/process_twitter_from_txs_records/main.rs"
