@@ -51,3 +51,10 @@ Note; This will import data into the `rune_stakers` table
 
 1. `make import-data-extracts`
 
+# Run Import token sale submissions
+
+1. `./target/release/import-token-sale-data < ./extracts/community_token_giveaway_submissions.csv`
+
+Note; 
+   * This will clean and import the data and also run the twitter checks at the same time. 
+   * This can take a while to finish and might be stopped by the twitter rate limiter and therefore should be run a couple of times to make sure all data is imported
