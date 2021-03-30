@@ -13,6 +13,17 @@ const PER_PAGE: &str = "100";
 #[derive(Deserialize, Debug)]
 struct ApiTxsResponse {
     tx: ApiTx,
+    body: body,
+}
+
+#[derive(Deserialize, Debug)]
+struct body {
+    messages: Vec<message>,
+}
+
+#[derive(Deserialize, Debug)]
+struct message {
+    from_address: String,
 }
 
 #[derive(Deserialize, Debug)]
@@ -75,21 +86,6 @@ async fn fetch_cosmos_account_txs(address: &str) -> anyhow::Result<ApiTxsRespons
     .await
 }
 
-// fn set() -> ExponentialBackoff {
-//     let mut eb = ExponentialBackoff {
-//         current_interval: Duration::from_millis(default::INITIAL_INTERVAL_MILLIS),
-//         initial_interval: Duration::from_millis(default::INITIAL_INTERVAL_MILLIS),
-//         randomization_factor: default::RANDOMIZATION_FACTOR,
-//         multiplier: default::MULTIPLIER,
-//         max_interval: Duration::from_millis(default::MAX_INTERVAL_MILLIS),
-//         max_elapsed_time: Some(Duration::from_millis(default::MAX_ELAPSED_TIME_MILLIS)),
-//         clock: C::default(),
-//         start_time: Instant::now(),
-//     };
-//     eb.reset();
-//     eb
-// }
-
 async fn fetch_cosmos_txs_details(hash: &str) -> anyhow::Result<ApiTxsResponse, reqwest::Error> {
     retry(ExponentialBackoff::default(), || async {
         let request = format!(
@@ -135,7 +131,7 @@ async fn process_cosmos_raw_txs(
                         match sqlx::query!(
                             r#"
                                 UPDATE txs
-                                SET memo = $1, twitter_handle = $5, sif_address = $6
+                                SET memo = $1, twitter_handle = $5, sif_address = $6, from_address = $7
                                 WHERE hash = $2 AND height = $3 AND network = $4
                                 RETURNING id
                             "#,
@@ -145,6 +141,7 @@ async fn process_cosmos_raw_txs(
                             "ATOM",
                             memo.handle,
                             memo.address,
+                            resp.body.messages.get(1).unwrap().from_address
                         )
                         .fetch_one(pool)
                         .await

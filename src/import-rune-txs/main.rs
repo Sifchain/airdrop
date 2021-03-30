@@ -50,8 +50,8 @@ async fn process_rune_raw_txs(response: &ApiResponse, pool: &PgPool) -> Result<(
         let memo = process_memo(&tx.memo);
         match sqlx::query!(
             r#"
-                        INSERT INTO txs (network, hash, height, memo, twitter_handle, sif_address)
-                        VALUES ( $1, $2, $3, $4, $5, $6)
+                        INSERT INTO txs (network, hash, height, memo, twitter_handle, sif_address, from_address)
+                        VALUES ( $1, $2, $3, $4, $5, $6, $7)
                         RETURNING id
                     "#,
             "RUNE",
@@ -59,7 +59,8 @@ async fn process_rune_raw_txs(response: &ApiResponse, pool: &PgPool) -> Result<(
             tx.blockHeight.to_string(),
             tx.memo,
             memo.handle,
-            memo.address
+            memo.address,
+            tx.fromAddr
         )
         .fetch_one(pool)
         .await
