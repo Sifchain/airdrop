@@ -95,7 +95,9 @@ async fn main() -> anyhow::Result<()> {
                         println!("error001: {}", e.to_string().red());
 
                         if e.to_string().contains("Rate limit") {
-                            panic!("Wait an hour for next run")
+                            println!("Sleeping for 350sec");
+                            thread::sleep(Duration::from_secs(350));
+                            continue;
                         }
 
                         match sqlx::query!(
