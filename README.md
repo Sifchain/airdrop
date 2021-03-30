@@ -15,7 +15,7 @@
 2. Setup db: 
     * `sqlx database create`
     * `sqlx migrate run`
-3. cargo build --release 
+3. `cargo build --release`
 
 # RUN Imports
 
@@ -67,3 +67,9 @@ Note;
 # TODO 
 
 * Need to do a balance check at the time of the incoming tx ie blockheight  
+
+
+Token comps:
+
+1. RUNE txs / Rune Staker pools 
+2. 
