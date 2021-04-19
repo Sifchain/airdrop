@@ -7,13 +7,14 @@ use sqlx::PgPool;
 use std::time::Duration;
 use utils::db::connect;
 use utils::memo::process_memo;
+use std::{env, thread};
 
 const PER_PAGE: &str = "100";
 
 #[derive(Deserialize, Debug)]
 struct ApiTxsResponse {
     tx: ApiTx,
-    body: body,
+    // body: body,
 }
 
 #[derive(Deserialize, Debug)]
@@ -33,6 +34,7 @@ struct ApiTx {
 
 #[derive(Deserialize, Debug)]
 struct ApiTxBody {
+    messages: Vec<message>,
     memo: String,
 }
 
@@ -59,7 +61,7 @@ struct RpcTx {
 
 async fn fetch_cosmos_raw_txs(page: u32) -> anyhow::Result<RpcResponse, reqwest::Error> {
     retry(ExponentialBackoff::default(), || async {
-            let request = format!("https://rpc.cosmos.network/tx_search?query=\"transfer.recipient='{to_address}'\"&per_page={per_page}&page={page}",
+            let request = format!("http://localhost:26657/tx_search?query=\"transfer.recipient='{to_address}'\"&per_page={per_page}&page={page}",
                                   to_address = "cosmos1ejrf4cur2wy6kfurg9f2jppp2h3afe5h6pkh5t",
                                   per_page = PER_PAGE,
                                   page = page.to_string()
@@ -87,9 +89,9 @@ async fn fetch_cosmos_account_txs(address: &str) -> anyhow::Result<ApiTxsRespons
 }
 
 async fn fetch_cosmos_txs_details(hash: &str) -> anyhow::Result<ApiTxsResponse, reqwest::Error> {
-    retry(ExponentialBackoff::default(), || async {
+    // retry(ExponentialBackoff::default(), || async {
         let request = format!(
-            "https://api.cosmos.network/cosmos/tx/v1beta1/txs/{hash}",
+            "http://localhost:1317/cosmos/tx/v1beta1/txs/{hash}",
             hash = hash
         );
         println!("request: {}", request);
@@ -97,8 +99,8 @@ async fn fetch_cosmos_txs_details(hash: &str) -> anyhow::Result<ApiTxsResponse, 
             .await?
             .json::<ApiTxsResponse>()
             .await?)
-    })
-    .await
+    // })
+    // .await
 }
 
 async fn process_cosmos_raw_txs(
@@ -109,6 +111,7 @@ async fn process_cosmos_raw_txs(
 
     for tx in txs {
         // save network, hash and height to db
+
         match sqlx::query!(
             r#"
                         INSERT INTO txs (network, hash, height)
@@ -123,10 +126,10 @@ async fn process_cosmos_raw_txs(
         .await
         {
             Ok(_) => {
-                match fetch_cosmos_txs_details(&tx.hash).await {
-                    Ok(resp) => {
+                let resp = fetch_cosmos_txs_details(&tx.hash).await?;
+                // match fetch_cosmos_txs_details(&tx.hash).await {
+                //     Ok(resp) => {
                         let memo = process_memo(&resp.tx.body.memo);
-
                         // save memo to db
                         match sqlx::query!(
                             r#"
@@ -141,7 +144,7 @@ async fn process_cosmos_raw_txs(
                             "ATOM",
                             memo.handle,
                             memo.address,
-                            resp.body.messages.get(1).unwrap().from_address
+                            resp.tx.body.messages.get(0).unwrap().from_address
                         )
                         .fetch_one(pool)
                         .await
@@ -149,9 +152,11 @@ async fn process_cosmos_raw_txs(
                             Ok(_) => println!("record saved"),
                             Err(e) => println!("error: {}", e),
                         }
-                    }
-                    Err(e) => return Err(e),
-                };
+                thread::sleep(Duration::from_millis(350));
+
+                //     }
+                //     Err(e) => return Err(e),
+                // };
             }
             Err(_) => println!("already saved: {}", tx.hash),
         }
